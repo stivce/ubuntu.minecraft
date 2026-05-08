@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Server</title>
+  <style>
+    :root {
+      --bg: #0f0f17;
+      --card: #1a1a2e;
+      --border: #2d2d44;
+      --text: #e0e0e0;
+      --muted: #888;
+      --green: #4caf50;
+      --red: #f44336;
+      --accent: #7c4dff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+    .motd { color: var(--muted); margin-bottom: 2rem; font-size: 0.9rem; min-height: 1.2em; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 2rem;
+      width: 100%;
+      max-width: 680px;
+      margin-bottom: 1rem;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    .dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.online  { background: var(--green); box-shadow: 0 0 8px var(--green); }
+    .dot.offline { background: var(--red); }
+    .status-label { font-weight: 500; }
+    .version { margin-left: auto; color: var(--muted); font-size: 0.82rem; }
+    .row { margin-bottom: 1.25rem; }
+    .row:last-child { margin-bottom: 0; }
+    .label {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 0.35rem;
+    }
+    .value { font-size: 1.05rem; font-weight: 500; }
+    .address-row { display: flex; gap: 0.5rem; align-items: center; }
+    .address-box {
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.95rem;
+      background: var(--bg);
+      padding: 0.45rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.45rem 0.9rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    button:hover { opacity: 0.82; }
+    .players-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.2rem 0.6rem;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .chip img { width: 16px; height: 16px; image-rendering: pixelated; }
+    .map-link { text-align: center; font-size: 0.95rem; }
+    .map-link a { color: var(--accent); text-decoration: none; }
+    .map-link a:hover { text-decoration: underline; }
+    .footer { color: var(--muted); font-size: 0.75rem; margin-top: 0.5rem; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    .stat-item { text-align: center; }
+    .stat-value { font-size: 1.1rem; font-weight: 600; margin-top: 0.2rem; }
+    .stat-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 0.4rem;
+      overflow: hidden;
+    }
+    .stat-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      transition: width 0.4s ease;
+    }
+    .stat-bar-fill.hot { background: #f44336; }
+    .stat-bar-fill.warm { background: #f9a825; }
+    .temp-graph-wrap { margin-top: 1rem; position: relative; }
+    .temp-graph-wrap .label { margin-bottom: 0.3rem; }
+    #temp-graph { display: block; width: 100%; overflow: visible; cursor: crosshair; }
+    #temp-tooltip {
+      display: none;
+      position: absolute;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 0.25rem 0.55rem;
+      font-size: 0.8rem;
+      pointer-events: none;
+      white-space: nowrap;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <h1>Minecraft Server</h1>
+  <p class="motd" id="motd"></p>
+
+  <div class="card">
+    <div class="status-row">
+      <div class="dot" id="dot"></div>
+      <span class="status-label" id="status-text">Checking…</span>
+      <span class="version" id="version"></span>
+    </div>
+
+    <div class="row">
+      <div class="label">Address</div>
+      <div class="address-row">
+        <div class="address-box" id="address"></div>
+        <button onclick="copyAddress()">Copy</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="label">Players</div>
+      <div class="value" id="player-count">—</div>
+      <div class="players-grid" id="player-list"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label" style="margin-bottom:0.75rem">Server Resources</div>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="label">CPU</div>
+        <div class="stat-value" id="stat-cpu">—</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-cpu" style="width:0%"></div></div>
+      </div>
+      <div class="stat-item">
+        <div class="label">RAM</div>
+        <div class="stat-value" id="stat-ram">—</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-ram" style="width:0%"></div></div>
+      </div>
+      <div class="stat-item">
+        <div class="label">Temp</div>
+        <div class="stat-value" id="stat-temp">—</div>
+        <div class="stat-bar"><div class="stat-bar-fill" id="bar-temp" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;margin-top:0.35rem;font-size:0.72rem;color:var(--muted)">
+          <span>↓ <span id="stat-temp-min">—</span></span>
+          <span>↑ <span id="stat-temp-max">—</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="temp-graph-wrap">
+      <div class="label">Temp — last 15 min</div>
+      <div id="temp-tooltip"></div>
+      <svg id="temp-graph" height="120" viewBox="0 0 400 120" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="temp-graph-wrap" style="margin-top:1.25rem">
+      <div class="label">Temp — last 24 h</div>
+      <div id="temp-tooltip-24h" style="display:none;position:absolute;background:var(--card);border:1px solid var(--border);border-radius:5px;padding:.25rem .55rem;font-size:.8rem;pointer-events:none;white-space:nowrap;transform:translateX(-50%);z-index:10"></div>
+      <svg id="temp-graph-24h" height="120" viewBox="0 0 400 120" preserveAspectRatio="none" style="display:block;width:100%;overflow:visible;cursor:crosshair"></svg>
+    </div>
+  </div>
+
+  <div class="card map-link">
+    <a href="http://__MINECRAFT_DOMAIN__:8100" target="_blank">Open live world map (Bluemap) →</a>
+  </div>
+
+  <p class="footer" id="footer">Refreshes every 30 s</p>
+
+  <script>
+    const SERVER = '__MINECRAFT_DOMAIN__';
+
+    document.getElementById('address').textContent = SERVER;
+
+    function copyAddress() {
+      navigator.clipboard.writeText(SERVER).catch(() => {});
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    }
+
+    async function fetchStatus() {
+      try {
+        const res  = await fetch(`https://api.mcsrvstat.us/3/${SERVER}`);
+        const data = await res.json();
+        const dot  = document.getElementById('dot');
+
+        if (data.online) {
+          dot.className = 'dot online';
+          document.getElementById('status-text').textContent = 'Online';
+          document.getElementById('version').textContent = data.version ?? '';
+          document.getElementById('motd').textContent =
+            (data.motd?.clean ?? []).join(' ');
+
+          const online = data.players?.online ?? 0;
+          const max    = data.players?.max    ?? 0;
+          document.getElementById('player-count').textContent = `${online} / ${max}`;
+
+          const listEl = document.getElementById('player-list');
+          listEl.innerHTML = '';
+          (data.players?.list ?? []).forEach(p => {
+            const name = typeof p === 'string' ? p : p.name;
+            const chip = document.createElement('div');
+            chip.className = 'chip';
+            chip.innerHTML =
+              `<img src="https://mc-heads.net/avatar/${encodeURIComponent(name)}/16" alt="">` +
+              `<span>${name}</span>`;
+            listEl.appendChild(chip);
+          });
+        } else {
+          dot.className = 'dot offline';
+          document.getElementById('status-text').textContent = 'Offline';
+          document.getElementById('version').textContent = '';
+          document.getElementById('motd').textContent = '';
+          document.getElementById('player-count').textContent = '—';
+          document.getElementById('player-list').innerHTML = '';
+        }
+      } catch {
+        document.getElementById('dot').className = 'dot offline';
+        document.getElementById('status-text').textContent = 'Status unavailable';
+      }
+
+      document.getElementById('footer').textContent =
+        `Last checked ${new Date().toLocaleTimeString()} · refreshes every 30 s`;
+    }
+
+    const WINDOW_SEC = 15 * 60; // 15 minutes
+    const tempHistory = []; // [{ts: unix_seconds, temp: float}, ...]
+
+    function drawTempGraph() {
+      const svg = document.getElementById('temp-graph');
+      const W = 400, H = 120, Y_MIN = 30, Y_MAX = 105;
+      const now        = Date.now() / 1000;
+      const winStart   = now - WINDOW_SEC;
+
+      const toX = ts  => ((ts - winStart) / WINDOW_SEC * W).toFixed(2);
+      const toY = t   => (H - ((t - Y_MIN) / (Y_MAX - Y_MIN)) * H).toFixed(2);
+      const warnY = toY(80), hotY = toY(90);
+
+      // Only keep last 15 min in memory
+      while (tempHistory.length && tempHistory[0].ts < winStart) tempHistory.shift();
+
+      let d = '';
+      tempHistory.forEach((p, i) => {
+        const prev = tempHistory[i - 1];
+        const gap  = i > 0 && (p.ts - prev.ts) > 5; // break line on gaps > 5s
+        d += (i === 0 || gap ? `M${toX(p.ts)} ${toY(p.temp)}` : ` L${toX(p.ts)} ${toY(p.temp)}`);
+      });
+
+      const cur       = tempHistory[tempHistory.length - 1]?.temp ?? 0;
+      const lineColor = cur >= 90 ? '#f44336' : cur >= 80 ? '#f9a825' : '#7c4dff';
+
+      svg.innerHTML =
+        `<line x1="0" y1="${warnY}" x2="${W}" y2="${warnY}" stroke="#f9a825" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.5"/>` +
+        `<line x1="0" y1="${hotY}"  x2="${W}" y2="${hotY}"  stroke="#f44336" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.5"/>` +
+        `<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="1.5" stroke-linejoin="round"/>` +
+        `<line id="graph-cursor" x1="${cursorSvgX}" y1="0" x2="${cursorSvgX}" y2="${H}" stroke="var(--muted)" stroke-width="0.5" opacity="0.7"/>`;
+    }
+
+    let cursorSvgX = -1;
+
+    function setupGraphHover() {
+      const svg     = document.getElementById('temp-graph');
+      const tooltip = document.getElementById('temp-tooltip');
+      const W = 400;
+
+      svg.addEventListener('mousemove', e => {
+        if (!tempHistory.length) return;
+
+        const rect    = svg.getBoundingClientRect();
+        const ratio   = Math.max(0, Math.min((e.clientX - rect.left) / rect.width, 1));
+        cursorSvgX    = ratio * W;
+        const cursor  = document.getElementById('graph-cursor');
+        if (cursor) { cursor.setAttribute('x1', cursorSvgX); cursor.setAttribute('x2', cursorSvgX); }
+
+        // Find closest point by timestamp
+        const hoverTs = Date.now() / 1000 - WINDOW_SEC + ratio * WINDOW_SEC;
+        let closest   = tempHistory[0];
+        for (const p of tempHistory) {
+          if (Math.abs(p.ts - hoverTs) < Math.abs(closest.ts - hoverTs)) closest = p;
+        }
+
+        tooltip.textContent   = `${closest.temp}°C · ${new Date(closest.ts * 1000).toLocaleTimeString()}`;
+        tooltip.style.display = 'block';
+        const tipX = Math.max(30, Math.min(e.clientX - rect.left, rect.width - 30));
+        tooltip.style.left = `${tipX}px`;
+        tooltip.style.top  = '-1.8rem';
+      });
+
+      svg.addEventListener('mouseleave', () => {
+        cursorSvgX = -1;
+        tooltip.style.display = 'none';
+        const cursor = document.getElementById('graph-cursor');
+        if (cursor) { cursor.setAttribute('x1', -1); cursor.setAttribute('x2', -1); }
+      });
+    }
+
+    setupGraphHover();
+
+    // ── 24h graph ─────────────────────────────────────────────────────────────
+    const WINDOW_24H    = 24 * 3600;
+    const tempHistory24h = [];
+    let   cursorSvgX24h  = -1;
+
+    function drawTempGraph24h() {
+      const svg = document.getElementById('temp-graph-24h');
+      const W = 400, H = 120, Y_MIN = 30, Y_MAX = 105;
+      const now      = Date.now() / 1000;
+      const winStart = now - WINDOW_24H;
+
+      const toX = ts => ((ts - winStart) / WINDOW_24H * W).toFixed(2);
+      const toY = t  => (H - ((t - Y_MIN) / (Y_MAX - Y_MIN)) * H).toFixed(2);
+
+      while (tempHistory24h.length && tempHistory24h[0].ts < winStart) tempHistory24h.shift();
+
+      let d = '';
+      tempHistory24h.forEach((p, i) => {
+        const prev = tempHistory24h[i - 1];
+        const gap  = i > 0 && (p.ts - prev.ts) > 120; // break on gaps > 2 min
+        d += (i === 0 || gap ? `M${toX(p.ts)} ${toY(p.temp)}` : ` L${toX(p.ts)} ${toY(p.temp)}`);
+      });
+
+      const cur       = tempHistory24h[tempHistory24h.length - 1]?.temp ?? 0;
+      const lineColor = cur >= 90 ? '#f44336' : cur >= 80 ? '#f9a825' : '#7c4dff';
+
+      svg.innerHTML =
+        `<line x1="0" y1="${toY(80)}" x2="${W}" y2="${toY(80)}" stroke="#f9a825" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.5"/>` +
+        `<line x1="0" y1="${toY(90)}" x2="${W}" y2="${toY(90)}" stroke="#f44336" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.5"/>` +
+        `<path d="${d}" fill="none" stroke="${lineColor}" stroke-width="1.5" stroke-linejoin="round"/>` +
+        `<line id="graph-cursor-24h" x1="${cursorSvgX24h}" y1="0" x2="${cursorSvgX24h}" y2="${H}" stroke="var(--muted)" stroke-width="0.5" opacity="0.7"/>`;
+    }
+
+    function setupGraphHover24h() {
+      const svg     = document.getElementById('temp-graph-24h');
+      const tooltip = document.getElementById('temp-tooltip-24h');
+      const W = 400;
+
+      svg.addEventListener('mousemove', e => {
+        if (!tempHistory24h.length) return;
+        const rect  = svg.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min((e.clientX - rect.left) / rect.width, 1));
+        cursorSvgX24h = ratio * W;
+        const cursor = document.getElementById('graph-cursor-24h');
+        if (cursor) { cursor.setAttribute('x1', cursorSvgX24h); cursor.setAttribute('x2', cursorSvgX24h); }
+
+        const hoverTs = Date.now() / 1000 - WINDOW_24H + ratio * WINDOW_24H;
+        let closest   = tempHistory24h[0];
+        for (const p of tempHistory24h) {
+          if (Math.abs(p.ts - hoverTs) < Math.abs(closest.ts - hoverTs)) closest = p;
+        }
+        const time = new Date(closest.ts * 1000);
+        tooltip.textContent   = `${closest.temp}°C · ${time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+        tooltip.style.display = 'block';
+        tooltip.style.left    = `${Math.max(30, Math.min(e.clientX - rect.left, rect.width - 30))}px`;
+        tooltip.style.top     = '-1.8rem';
+      });
+
+      svg.addEventListener('mouseleave', () => {
+        cursorSvgX24h = -1;
+        tooltip.style.display = 'none';
+        const cursor = document.getElementById('graph-cursor-24h');
+        if (cursor) { cursor.setAttribute('x1', -1); cursor.setAttribute('x2', -1); }
+      });
+    }
+
+    setupGraphHover24h();
+
+    async function loadHistory24h() {
+      try {
+        const res     = await fetch('/api/history24h');
+        const history = await res.json();
+        if (!history.length) return;
+
+        const browserNow   = Date.now() / 1000;
+        const serverRecent = history[history.length - 1][0];
+        const offset       = browserNow - serverRecent;
+
+        tempHistory24h.length = 0;
+        history.forEach(([serverTs, temp]) => {
+          const ts = serverTs + offset;
+          if (ts >= browserNow - WINDOW_24H) tempHistory24h.push({ts, temp});
+        });
+        drawTempGraph24h();
+      } catch { /* no history yet */ }
+    }
+
+    async function fetchStats() {
+      try {
+        const res  = await fetch('/api/stats');
+        const data = await res.json();
+
+        const cpu = data.cpu_percent ?? 0;
+        document.getElementById('stat-cpu').textContent = `${cpu}%`;
+        setBar('bar-cpu', cpu, 80, 95);
+
+        const mem = data.memory;
+        if (mem) {
+          document.getElementById('stat-ram').textContent =
+            `${(mem.used_mb / 1024).toFixed(1)} / ${(mem.total_mb / 1024).toFixed(1)} GB`;
+          setBar('bar-ram', mem.percent, 80, 95);
+        }
+
+        const temp = data.cpu_temp;
+        document.getElementById('stat-temp').textContent = temp != null ? `${temp}°C` : 'N/A';
+        if (temp != null) setBar('bar-temp', (temp / 100) * 100, 70, 85);
+
+        const tMin = data.temp_min_15m, tMax = data.temp_max_15m;
+        document.getElementById('stat-temp-min').textContent = tMin != null ? `${tMin}°C` : '—';
+        document.getElementById('stat-temp-max').textContent = tMax != null ? `${tMax}°C` : '—';
+
+        if (temp != null) tempHistory.push({ts: Date.now() / 1000, temp});
+        drawTempGraph();
+      } catch {
+        ['stat-cpu', 'stat-ram', 'stat-temp'].forEach(id =>
+          document.getElementById(id).textContent = '—');
+      }
+    }
+
+    function setBar(id, pct, warnAt, hotAt) {
+      const el = document.getElementById(id);
+      el.style.width = `${Math.min(pct, 100)}%`;
+      el.className = 'stat-bar-fill' +
+        (pct >= hotAt ? ' hot' : pct >= warnAt ? ' warm' : '');
+    }
+
+    async function loadHistory() {
+      try {
+        const res     = await fetch('/api/history');
+        const history = await res.json(); // [[unix_ts, temp], ...] oldest first
+        if (!history.length) return;
+
+        // Normalise to browser clock: compute offset from most recent server reading
+        const browserNow  = Date.now() / 1000;
+        const serverRecent = history[history.length - 1][0];
+        const offset       = browserNow - serverRecent; // skew correction
+
+        tempHistory.length = 0;
+        history.forEach(([serverTs, temp]) => {
+          const ts = serverTs + offset;
+          if (ts >= browserNow - WINDOW_SEC) tempHistory.push({ts, temp});
+        });
+        drawTempGraph();
+      } catch { /* no history yet */ }
+    }
+
+    // Load history then start live polling
+    Promise.all([loadHistory(), loadHistory24h()]).then(() => {
+      fetchStatus();
+      fetchStats();
+      setInterval(fetchStatus, 30_000);
+      setInterval(fetchStats, 1_000);
+      // 24h graph: add live point every minute, reload from server every 5 min
+      setInterval(() => {
+        const last = tempHistory24h[tempHistory24h.length - 1];
+        const now  = Date.now() / 1000;
+        if (!last || now - last.ts >= 55) {
+          fetch('/api/stats').then(r => r.json()).then(d => {
+            if (d.cpu_temp != null) { tempHistory24h.push({ts: now, temp: d.cpu_temp}); drawTempGraph24h(); }
+          }).catch(() => {});
+        }
+      }, 60_000);
+      setInterval(loadHistory24h, 5 * 60_000);
+    });
+  </script>
+</body>
+</html>

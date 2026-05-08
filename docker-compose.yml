@@ -1,0 +1,75 @@
+services:
+  minecraft:
+    image: itzg/minecraft-server:latest
+    container_name: minecraft
+    restart: unless-stopped
+    ports:
+      - "25565:25565"   # game
+      - "8100:8100"     # Bluemap map
+    environment:
+      EULA: "TRUE"
+
+      # Paper: identical to vanilla gameplay, better multiplayer performance,
+      # and required for the Bluemap plugin
+      TYPE: FABRIC
+      VERSION: "26.1"
+
+      # JVM memory — 4 GB heap is comfortable for ~10 players
+      MEMORY: 4G
+
+      # Aikar's GC flags — industry standard for Minecraft, reduces CPU spikes
+      JVM_XX_OPTS: >-
+        -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200
+        -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:+AlwaysPreTouch
+        -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M
+        -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4
+        -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90
+        -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32
+        -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1
+
+      # Auto-download Bluemap plugin on startup
+      MODRINTH_PROJECTS: "bluemap,fabric-api"
+
+      # Server properties
+      DIFFICULTY: normal
+      MODE: survival
+      MAX_PLAYERS: 12
+      MOTD: "A Minecraft Server"
+      ALLOW_FLIGHT: "false"
+      SPAWN_PROTECTION: 16
+      VIEW_DISTANCE: 8
+      SIMULATION_DISTANCE: 10
+      ONLINE_MODE: "true"
+      TZ: Europe/London
+
+    volumes:
+      - ./data:/data
+
+    stop_grace_period: 60s
+
+  status:
+    image: nginx:alpine
+    container_name: minecraft-status
+    restart: unless-stopped
+    depends_on:
+      - stats
+    command: /bin/sh /templates/init.sh
+    environment:
+      MINECRAFT_DOMAIN: ${MINECRAFT_DOMAIN}
+    ports:
+      - "8200:80"       # status page
+    volumes:
+      - ./web:/templates:ro
+      - ./web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  stats:
+    image: python:3-alpine
+    container_name: minecraft-stats
+    restart: unless-stopped
+    command: python /app/server.py
+    volumes:
+      - ./stats/server.py:/app/server.py:ro
+      - ./logs:/logs
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    # No ports exposed — only reachable internally via nginx proxy

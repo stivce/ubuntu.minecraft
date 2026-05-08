@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Server — Maintenance</title>
+  <style>
+    :root {
+      --bg: #0f0f17;
+      --card: #1a1a2e;
+      --border: #2d2d44;
+      --text: #e0e0e0;
+      --muted: #888;
+      --yellow: #f9a825;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    p { color: var(--muted); font-size: 0.95rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--yellow);
+      border-radius: 12px;
+      padding: 2.5rem 3rem;
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+    }
+    .domain {
+      margin-top: 1.5rem;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      font-size: 0.9rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔧</div>
+    <h1>Under Maintenance</h1>
+    <p>The server is temporarily down. Check back soon.</p>
+    <div class="domain">__MINECRAFT_DOMAIN__</div>
+  </div>
+</body>
+</html>
