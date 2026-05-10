@@ -1,13 +1,14 @@
 # mimir-minecraft
 
-Minecraft Java server (Fabric) for ~10 players running in Docker, with a live world map (Bluemap), a status page, and a lightweight stats API.
+Minecraft Java server (Fabric) for ~10 players running in Docker, with a live world map (Bluemap), a status page, a lightweight stats API, and automatic HTTPS via Caddy.
 
 ## Stack
 
 | Container | Image | Purpose |
 |---|---|---|
+| `caddy`   | `caddy:2-alpine`                 | Reverse proxy, automatic HTTPS (local CA) |
 | `minecraft` | `itzg/minecraft-server` (Fabric) | Game server + Bluemap mod |
-| `status`    | `nginx:alpine`                   | Public status page |
+| `status`    | `nginx:alpine`                   | Public status page + Bluemap proxy |
 | `stats`     | `python:3-alpine`                | CPU / memory / temp API consumed by the status page |
 
 ## Ports
@@ -15,14 +16,14 @@ Minecraft Java server (Fabric) for ~10 players running in Docker, with a live wo
 | Port    | Protocol | Purpose                     |
 |---------|----------|-----------------------------|
 | `25565` | TCP      | Minecraft game — forward on router |
-| `8100`  | TCP      | Bluemap live map — forward on router |
-| `8200`  | TCP      | Status page — forward on router |
+| `80`    | TCP      | HTTP → HTTPS redirect        |
+| `443`   | TCP/UDP  | HTTPS (status page, Bluemap, CA) |
 
 ## Prerequisites
 
 - Docker + Docker Compose v2 on the host
-- Ports `25565`, `8100`, `8200` forwarded (TCP) on your router to the host
-- DNS A record for your status domain pointing to the public IP
+- Port `25565` (TCP) and `443` (TCP/UDP) forwarded on your router to the host
+- DNS A records for `${MINECRAFT_DOMAIN}` and `ca.${MINECRAFT_DOMAIN}` pointing to the public IP
 
 ## Deploy
 
@@ -36,6 +37,13 @@ cp .env.example .env
 ```
 
 The first run downloads Fabric + Bluemap and takes a couple of minutes. `mc.sh start` waits for the server, ops the configured users (idempotent), and patches Bluemap to accept its download and use a single render thread.
+
+### Trust the local CA (first time)
+
+Caddy issues certificates from its own local CA. Download and install the root cert so browsers trust the site:
+
+1. Visit `http://ca.${MINECRAFT_DOMAIN}` and download `caddy-root-ca.crt`
+2. Follow the platform instructions on that page (macOS, Linux, Windows, iOS)
 
 ## Control script
 
@@ -52,11 +60,12 @@ The first run downloads Fabric + Bluemap and takes a couple of minutes. `mc.sh s
 
 ## Access
 
-| URL                                    | Description |
-|----------------------------------------|-------------|
-| `${MINECRAFT_DOMAIN}`                  | Game server address (use in Minecraft client) |
-| `http://${MINECRAFT_DOMAIN}:8200`      | Status page |
-| `http://${MINECRAFT_DOMAIN}:8100`      | Bluemap live world map |
+| URL | Description |
+|-----|-------------|
+| `${MINECRAFT_DOMAIN}:25565` | Game server address (use in Minecraft client) |
+| `https://${MINECRAFT_DOMAIN}` | Status page |
+| `https://${MINECRAFT_DOMAIN}/map/` | Bluemap live world map |
+| `http://ca.${MINECRAFT_DOMAIN}` | Download & install the local CA certificate |
 
 ## Configuration
 
@@ -70,6 +79,13 @@ Common server settings live in `docker-compose.yml`:
 | `MOTD`        | `A Minecraft Server` | Message shown in the server list |
 | `ONLINE_MODE` | `true`               | Set to `false` for offline/cracked accounts |
 | `VERSION`     | `26.1`               | Fabric loader version (pinned) |
+
+The domain is configured in `.env`:
+
+| Variable           | Example              | Description |
+|--------------------|----------------------|-------------|
+| `MINECRAFT_DOMAIN` | `mc.example.com`     | Public-facing domain for the server |
+| `MINECRAFT_OPS`    | `alice,bob`          | Comma-separated usernames to auto-op on first start |
 
 After changing a value: `./mc.sh start` (no rebuild needed).
 
