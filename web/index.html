@@ -233,32 +233,15 @@
 
     async function fetchStatus() {
       try {
-        const res  = await fetch(`https://api.mcsrvstat.us/3/${SERVER}`);
+        const res  = await fetch('/api/minecraft');
         const data = await res.json();
         const dot  = document.getElementById('dot');
 
         if (data.online) {
           dot.className = 'dot online';
           document.getElementById('status-text').textContent = 'Online';
-          document.getElementById('version').textContent = data.version ?? '';
-          document.getElementById('motd').textContent =
-            (data.motd?.clean ?? []).join(' ');
-
-          const online = data.players?.online ?? 0;
-          const max    = data.players?.max    ?? 0;
-          document.getElementById('player-count').textContent = `${online} / ${max}`;
-
-          const listEl = document.getElementById('player-list');
-          listEl.innerHTML = '';
-          (data.players?.list ?? []).forEach(p => {
-            const name = typeof p === 'string' ? p : p.name;
-            const chip = document.createElement('div');
-            chip.className = 'chip';
-            chip.innerHTML =
-              `<img src="https://mc-heads.net/avatar/${encodeURIComponent(name)}/16" alt="">` +
-              `<span>${name}</span>`;
-            listEl.appendChild(chip);
-          });
+          document.getElementById('player-count').textContent =
+            `${data.players_online} / ${data.players_max}`;
         } else {
           dot.className = 'dot offline';
           document.getElementById('status-text').textContent = 'Offline';

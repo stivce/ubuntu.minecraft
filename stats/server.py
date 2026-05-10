@@ -4,7 +4,7 @@ Logs CPU temp every second to /logs/temp.log and returns 15-min min/max."""
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from collections import deque
-import json, os, time
+import json, os, time, socket, struct
 
 
 LOG_FILE      = '/logs/temp.log'
@@ -135,6 +135,78 @@ def history_24h():
     return [[ts, round(sum(v) / len(v), 1)] for ts, v in sorted(buckets.items())]
 
 
+# ── Minecraft server list ping ───────────────────────────────────────────────
+
+def _varint(n):
+    buf = b''
+    while True:
+        part = n & 0x7F
+        n >>= 7
+        if n:
+            part |= 0x80
+        buf += bytes([part])
+        if not n:
+            break
+    return buf
+
+def _read_varint(sock):
+    n, shift = 0, 0
+    while True:
+        b = sock.recv(1)
+        if not b:
+            raise EOFError()
+        b = b[0]
+        n |= (b & 0x7F) << shift
+        if not (b & 0x80):
+            return n
+        shift += 7
+
+def mc_ping(host='minecraft', port=25565, timeout=3):
+    try:
+        s = socket.create_connection((host, port), timeout=timeout)
+        host_b = host.encode()
+        handshake = (
+            _varint(0x00) +
+            _varint(-1) +                   # protocol version (any)
+            _varint(len(host_b)) + host_b +
+            struct.pack('>H', port) +
+            _varint(1)                       # next state: status
+        )
+        s.sendall(_varint(len(handshake)) + handshake)
+        s.sendall(b'\x01\x00')              # status request
+
+        length = _read_varint(s)
+        data = b''
+        while len(data) < length:
+            chunk = s.recv(length - len(data))
+            if not chunk:
+                break
+            data += chunk
+        s.close()
+
+        # skip packet id varint, then read string length varint
+        i = 0
+        while data[i] & 0x80:
+            i += 1
+        i += 1
+        n, shift = 0, 0
+        while True:
+            b = data[i]; i += 1
+            n |= (b & 0x7F) << shift
+            if not (b & 0x80):
+                break
+            shift += 7
+
+        info = json.loads(data[i:i + n])
+        return {
+            'online': True,
+            'players_online': info.get('players', {}).get('online', 0),
+            'players_max':    info.get('players', {}).get('max', 0),
+        }
+    except Exception:
+        return {'online': False, 'players_online': 0, 'players_max': 0}
+
+
 # ── HTTP handler ─────────────────────────────────────────────────────────────
 
 class Handler(BaseHTTPRequestHandler):
@@ -150,6 +222,10 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self.path.endswith('/minecraft'):
+            self._send_json(mc_ping())
+            return
+
         if self.path.endswith('/history24h'):
             self._send_json(history_24h())
             return
