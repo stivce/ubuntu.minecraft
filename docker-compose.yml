@@ -13,6 +13,7 @@ services:
       - ./infrastructure/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./infrastructure/caddy/data:/data
       - ./infrastructure/caddy/config:/config
+      - ./infrastructure/logs:/data/logs
     restart: always
 
   minecraft:

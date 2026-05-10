@@ -13,13 +13,124 @@
     }
 }
 
+# CA Certificate Download (NOT protected - must be accessible to install certs)
+ca.{$MINECRAFT_DOMAIN} {
+    # Serve root.crt as a certificate download
+    handle /root.crt {
+        root * /data/caddy/pki/authorities/local
+        file_server
+        header {
+            Content-Type "application/x-x509-ca-cert"
+            Content-Disposition "attachment; filename=\"caddy-root-ca.crt\""
+        }
+    }
+
+    handle {
+        header Content-Type "text/html; charset=utf-8"
+        respond `<!DOCTYPE html>
+<html>
+<head><title>Index of /</title></head>
+<body><h1>Index of /</h1><a href="/root.crt">root.crt</a></body>
+</html>` 200
+    }
+
+    log {
+        output file /data/logs/ca-access.log
+        format json
+    }
+}
+
 {$MINECRAFT_DOMAIN} {
     reverse_proxy status:80
 
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Frame-Options "SAMEORIGIN"
-        X-Content-Options "nosniff"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output file /data/logs/mc-access.log
+        format json
+    }
+}
+
+# CA Certificate Download (NOT protected - must be accessible to install certs)
+ca.{$MINECRAFT_DOMAIN} {
+    # Serve root.crt as a certificate download
+    handle /root.crt {
+        root * /data/caddy/pki/authorities/local
+        file_server
+        header {
+            Content-Type "application/x-x509-ca-cert"
+            Content-Disposition "attachment; filename=\"caddy-root-ca.crt\""
+        }
+    }
+
+    handle {
+        header Content-Type "text/html; charset=utf-8"
+        respond `<!DOCTYPE html>
+<html>
+<head><title>Index of /</title></head>
+<body><h1>Index of /</h1><a href="/root.crt">root.crt</a></body>
+</html>` 200
+    }
+
+    log {
+        output file /data/logs/ca-access.log
+        format json
+    }
+}
+
+{$MINECRAFT_DOMAIN} {
+    reverse_proxy status:80
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output file /data/logs/mc-access.log
+        format json
+    }
+}
+
+ca.{$MINECRAFT_DOMAIN} {
+    handle /root.crt {
+        root * /data/caddy/pki/authorities/local
+        file_server
+        header {
+            Content-Type "application/x-x509-ca-cert"
+            Content-Disposition "attachment; filename=\"caddy-root-ca.crt\""
+        }
+    }
+
+    handle {
+        header Content-Type "text/html; charset=utf-8"
+        respond `<!DOCTYPE html>
+<html>
+<head><title>Index of /</title></head>
+<body><h1>Index of /</h1><a href="/root.crt">root.crt</a></body>
+</html>` 200
+    }
+
+    log {
+        output file /data/logs/ca-access.log
+        format json
+    }
+}
+
+{$MINECRAFT_DOMAIN} {
+    reverse_proxy status:80
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
     }
 
