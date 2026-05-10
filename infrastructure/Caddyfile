@@ -2,7 +2,7 @@
     local_certs
 }
 
-ca.mc.suecyde.eu {
+ca.{$MINECRAFT_DOMAIN} {
     handle /root.crt {
         root * /data/caddy/pki/authorities/local
         file_server
@@ -27,7 +27,7 @@ ca.mc.suecyde.eu {
     }
 }
 
-mc.suecyde.eu {
+{$MINECRAFT_DOMAIN} {
     reverse_proxy status:80
 
     header {
