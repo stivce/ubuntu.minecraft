@@ -1,13 +1,8 @@
-# =============================================================================
-# Caddy Reverse Proxy - Minecraft Server
-# =============================================================================
-
 {
     local_certs
 }
 
-# CA Certificate Download (NOT protected - must be accessible to install certs)
-ca.{$MINECRAFT_DOMAIN} {
+ca.mc.suecyde.eu {
     handle /root.crt {
         root * /data/caddy/pki/authorities/local
         file_server
@@ -32,7 +27,7 @@ ca.{$MINECRAFT_DOMAIN} {
     }
 }
 
-{$MINECRAFT_DOMAIN} {
+mc.suecyde.eu {
     reverse_proxy status:80
 
     header {
