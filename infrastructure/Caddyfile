@@ -1,0 +1,30 @@
+# =============================================================================
+# Caddy Reverse Proxy - Minecraft Server
+# =============================================================================
+
+{
+    local_certs
+}
+
+(authelia) {
+    forward_auth authelia:9091 {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+    }
+}
+
+{$MINECRAFT_DOMAIN} {
+    reverse_proxy status:80
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output file /data/logs/mc-access.log
+        format json
+    }
+}

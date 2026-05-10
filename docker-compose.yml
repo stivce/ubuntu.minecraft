@@ -1,11 +1,26 @@
 services:
+  # Caddy reverse proxy with automatic HTTPS
+  caddy:
+    image: caddy:2-alpine
+    container_name: mc-caddy
+    ports:
+      - 80:80       # HTTP (redirects to HTTPS)
+      - 443:443     # HTTPS
+      - 443:443/udp # HTTP/3
+    environment:
+      - MINECRAFT_DOMAIN=${MINECRAFT_DOMAIN}
+    volumes:
+      - ./infrastructure/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./infrastructure/caddy/data:/data
+      - ./infrastructure/caddy/config:/config
+    restart: always
+
   minecraft:
     image: itzg/minecraft-server:latest
     container_name: minecraft
     restart: unless-stopped
     ports:
       - "25565:25565"   # game
-      - "8100:8100"     # Bluemap map
     environment:
       EULA: "TRUE"
 
@@ -56,8 +71,8 @@ services:
     command: /bin/sh /templates/init.sh
     environment:
       MINECRAFT_DOMAIN: ${MINECRAFT_DOMAIN}
-    ports:
-      - "8200:80"       # status page
+    expose:
+      - 80
     volumes:
       - ./web:/templates:ro
       - ./web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
