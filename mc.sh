@@ -11,6 +11,7 @@ set -euo pipefail
 #   stop     Switch status page to maintenance, stop only the minecraft container
 #   down     Stop and remove all containers (preserves data)
 #   destroy  Stop, remove containers, AND delete all world data (irreversible)
+#   backup   Stop minecraft, archive ./data/ to ./backups/, restart minecraft
 #   status   Show container status
 #   logs     Follow logs from all containers
 # =============================================================================
@@ -129,16 +130,72 @@ cmd_logs() {
     $COMPOSE logs -f
 }
 
+cmd_backup() {
+    local backup_dir="${SCRIPT_DIR}/backups"
+    local timestamp
+    timestamp="$(date +%F_%H-%M-%S)"
+    local archive="${backup_dir}/backup-${timestamp}.tar.gz"
+
+    mkdir -p "${backup_dir}"
+
+    echo "Stopping minecraft for backup..."
+    cmd_stop
+
+    echo "Archiving ./data/ to ${archive}..."
+    tar -czf "${archive}" -C "${SCRIPT_DIR}" data/
+    echo "Backup saved: ${archive}"
+
+    echo "Restarting minecraft..."
+    $COMPOSE start minecraft
+    echo "Done."
+}
+
+usage() {
+    cat <<EOF
+USAGE
+    ./mc.sh <command>
+
+COMMANDS
+    start
+        Bring up all containers. Renders the live status page, waits for the
+        server to accept RCON, grants op to any users in MINECRAFT_OPS, and
+        configures Bluemap on first run.
+
+    stop
+        Switch the status page to maintenance mode and stop only the minecraft
+        container. Caddy, nginx, and stats keep running.
+
+    down
+        Stop and remove all containers. World data in ./data/ is preserved.
+
+    destroy
+        Stop all containers and permanently delete ./data/ (world, configs,
+        plugins). Requires typing 'yes' to confirm. Irreversible.
+
+    backup
+        Stop minecraft, archive ./data/ to ./backups/backup-<timestamp>.tar.gz,
+        then restart the minecraft container. Other containers stay up.
+
+    status
+        Show container status (docker compose ps).
+
+    logs
+        Follow logs from all containers.
+EOF
+    exit "${1:-0}"
+}
+
 case "${1:-}" in
     start)   cmd_start ;;
     stop)    cmd_stop ;;
     down)    cmd_down ;;
     destroy) cmd_destroy ;;
+    backup)  cmd_backup ;;
     status)  cmd_status ;;
     logs)    cmd_logs ;;
-    -h|--help|help) usage 0 ;;
+    -h|--help|help|"") usage 0 ;;
     *)
-        echo "Unknown command: ${1:-(none)}" >&2
+        echo "Unknown command: ${1}" >&2
         echo ""
         usage 1
         ;;

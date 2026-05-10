@@ -55,6 +55,7 @@ Caddy issues certificates from its own local CA. Download and install the root c
 | `./mc.sh stop`    | Switch the status page to maintenance, stop only the `minecraft` container |
 | `./mc.sh down`    | Stop and remove all containers (world data preserved in `./data/`) |
 | `./mc.sh destroy` | Stop, remove containers, AND wipe `./data/` (irreversible) |
+| `./mc.sh backup`  | Stop minecraft, archive `./data/` to `./backups/backup-<timestamp>.tar.gz`, restart |
 | `./mc.sh status`  | `docker compose ps` |
 | `./mc.sh logs`    | Follow logs from all containers |
 
@@ -91,10 +92,8 @@ After changing a value: `./mc.sh start` (no rebuild needed).
 
 ## World backups
 
-World data lives in `./data/`. Back it up with the server stopped:
-
 ```bash
-./mc.sh down
-tar -czf backup-$(date +%F).tar.gz data/
-./mc.sh start
+./mc.sh backup
 ```
+
+Archives `./data/` to `./backups/backup-<timestamp>.tar.gz` with only the minecraft container stopped. Other services stay up.
