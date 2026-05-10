@@ -2,6 +2,21 @@
     local_certs
 }
 
+http://ca.{$MINECRAFT_DOMAIN} {
+    handle /root.crt {
+        root * /data/caddy/pki/authorities/local
+        file_server
+        header {
+            Content-Type "application/x-x509-ca-cert"
+            Content-Disposition "attachment; filename=\"caddy-root-ca.crt\""
+        }
+    }
+
+    handle {
+        redir https://{host}{uri} 308
+    }
+}
+
 ca.{$MINECRAFT_DOMAIN} {
     handle /root.crt {
         root * /data/caddy/pki/authorities/local
@@ -15,9 +30,49 @@ ca.{$MINECRAFT_DOMAIN} {
     handle {
         header Content-Type "text/html; charset=utf-8"
         respond `<!DOCTYPE html>
-<html>
-<head><title>Index of /</title></head>
-<body><h1>Index of /</h1><a href="/root.crt">root.crt</a></body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Install CA Certificate</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #222; }
+    h1 { font-size: 1.4rem; }
+    .download { display: inline-block; margin: 16px 0; padding: 12px 24px; background: #2563eb; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 600; }
+    .download:hover { background: #1d4ed8; }
+    details { margin-top: 24px; border: 1px solid #ddd; border-radius: 6px; padding: 12px 16px; }
+    summary { font-weight: 600; cursor: pointer; }
+    code { display: block; background: #f4f4f4; padding: 10px; border-radius: 4px; font-size: 0.85rem; margin-top: 8px; white-space: pre-wrap; word-break: break-all; }
+    p { line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <h1>CA Certificate</h1>
+  <p>Download and install this certificate to trust the local HTTPS services without browser warnings.</p>
+  <a class="download" href="/root.crt">Download caddy-root-ca.crt</a>
+
+  <details open>
+    <summary>macOS</summary>
+    <code>sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain ~/Downloads/caddy-root-ca.crt</code>
+  </details>
+
+  <details>
+    <summary>Linux</summary>
+    <code>sudo cp caddy-root-ca.crt /usr/local/share/ca-certificates/caddy-root-ca.crt
+sudo update-ca-certificates</code>
+  </details>
+
+  <details>
+    <summary>Windows</summary>
+    <p>Double-click the downloaded file → Install Certificate → Local Machine → Place in "Trusted Root Certification Authorities".</p>
+  </details>
+
+  <details>
+    <summary>iOS / iPadOS</summary>
+    <p>Open the downloaded file on your device → tap Install → go to Settings → General → VPN &amp; Device Management → trust the profile → then enable full trust under Certificate Trust Settings.</p>
+  </details>
+</body>
 </html>` 200
     }
 
