@@ -167,7 +167,7 @@ def mc_ping(host='minecraft', port=25565, timeout=3):
         host_b = host.encode()
         handshake = (
             _varint(0x00) +
-            _varint(-1) +                   # protocol version (any)
+            _varint(767) +                  # protocol version (1.21)
             _varint(len(host_b)) + host_b +
             struct.pack('>H', port) +
             _varint(1)                       # next state: status
