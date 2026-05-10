@@ -76,10 +76,11 @@ Common server settings live in `docker-compose.yml`:
 |---------------|----------------------|-------------|
 | `DIFFICULTY`  | `normal`             | `peaceful` / `easy` / `normal` / `hard` |
 | `MODE`        | `survival`           | `survival` / `creative` / `adventure` |
-| `MAX_PLAYERS` | `12`                 | Maximum concurrent players |
+| `MAX_PLAYERS` | `5`                  | Maximum concurrent players |
 | `MOTD`        | `A Minecraft Server` | Message shown in the server list |
 | `ONLINE_MODE` | `true`               | Set to `false` for offline/cracked accounts |
 | `VERSION`     | `26.1`               | Fabric loader version (pinned) |
+| `TZ`          | `Europe/Vienna`      | Server timezone |
 
 The domain is configured in `.env`:
 

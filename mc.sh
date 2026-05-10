@@ -31,11 +31,6 @@ OPS_FILE="${SCRIPT_DIR}/data/ops.json"
 BLUEMAP_CONF="/data/config/bluemap/core.conf"
 RCON_TIMEOUT=180  # seconds to wait for the server to accept rcon
 
-usage() {
-    sed -n '/^# Usage:/,/^# ====/p' "$0" | sed 's/^# \?//'
-    exit "${1:-0}"
-}
-
 cmd_start() {
     echo "Starting all containers..."
     $COMPOSE up -d

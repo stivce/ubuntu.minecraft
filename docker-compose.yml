@@ -25,8 +25,7 @@ services:
     environment:
       EULA: "TRUE"
 
-      # Paper: identical to vanilla gameplay, better multiplayer performance,
-      # and required for the Bluemap plugin
+      # Fabric: lightweight mod loader required for Bluemap
       TYPE: FABRIC
       VERSION: "26.1"
 
@@ -49,14 +48,14 @@ services:
       # Server properties
       DIFFICULTY: normal
       MODE: survival
-      MAX_PLAYERS: 12
+      MAX_PLAYERS: 5
       MOTD: "A Minecraft Server"
       ALLOW_FLIGHT: "false"
       SPAWN_PROTECTION: 16
       VIEW_DISTANCE: 8
       SIMULATION_DISTANCE: 10
       ONLINE_MODE: "true"
-      TZ: Europe/London
+      TZ: Europe/Vienna
 
     volumes:
       - ./data:/data
